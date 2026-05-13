@@ -8,10 +8,9 @@ const infobar = document.querySelector("div.kp-wholepage-osrp");
 // infobar contains the "Vincent Van Gogh (Dutch painter)"
 
 const kgStuff = {
-  
+
 }
 
-const results = document.querySelector("div#search"); // not a fan, but this seems stable
 
 // const botstuff = document.querySelector("div#botstuff") // anti-bot stuff?
 
@@ -19,25 +18,39 @@ const results = document.querySelector("div#search"); // not a fan, but this see
 
 // const artblockOnlyDirect = document.querySelector("div[attrid=kc:/visual_art/visual_artist:works]") // not this either
 
-const artworkResults = results.querySelector("g-loading-icon").nextElementSibling; // Interesting.
-// works on live too, hmm
-// but NOT on discography
-//  NOTE: discography uses a different block - the GRID view, not a carousel view - (wp-grid-view, wp-grid-tile)
-//    this grid view, given the more predictable element name, has different approaches
-// same thing for filmography, games, books
+
 
 // can easily be deprecated if Google decides to recompile with more mangling and nesting
 // const artworkParent = artworkResults.parentElement.parentElement;
 
-const paintings = Array.from(artworkResults.querySelectorAll("img"))
-  .map(img => {
-    const details = img.nextElementSibling; // relative HTML positioning, can be deprecated easily
-    return {
-      name: details.firstElementChild?.textContent,
-      extensions: [
-        details.lastElementChild?.textContent
-      ],
-      link: img.parentElement.href,
-      image: img.src,
-    }
-  })
+
+
+function scrapeItems() {
+  const results = document.querySelector("div#search"); // not a fan, but this seems stable
+
+  const artworkResults = results.querySelector("g-loading-icon").nextElementSibling; // Interesting.
+  // works on live too, hmm
+  // but NOT on discography
+  //  NOTE: discography uses a different block - the GRID view, not a carousel view - (wp-grid-view, wp-grid-tile)
+  //    this grid view, given the more predictable element name, has different approaches
+  // same thing for filmography, games, books
+
+  const items = Array.from(artworkResults.querySelectorAll("img"))
+    .map(img => {
+      const details = img.nextElementSibling; // relative HTML positioning, can be deprecated easily
+      const hasExtensions = details.lastElementChild?.textContent ?? false;
+      return {
+        name: details.firstElementChild?.textContent,
+        extensions: hasExtensions
+          ? [
+            details.lastElementChild?.textContent
+          ]
+          : undefined,
+        // string replace to match expected
+        link: img.parentElement.href.replace("file://", "https://www.google.com"),
+        image: img.getAttribute("data-src") ?? img.src,
+      }
+    });
+
+  return { artworks: items }
+}
