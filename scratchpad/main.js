@@ -23,12 +23,22 @@ const kgStuff = {
 // can easily be deprecated if Google decides to recompile with more mangling and nesting
 // const artworkParent = artworkResults.parentElement.parentElement;
 
+/**
+ *  Scrape data-attrid="kc:/visual_art/visual_artist:works"
+ */
+function scrapeVisualArtist() {
 
+}
 
 function scrapeItems() {
   const results = document.querySelector("div#search"); // not a fan, but this seems stable
 
-  const artworkResults = results.querySelector("g-loading-icon").nextElementSibling; // Interesting.
+  // const relAnchor = results.querySelector("g-loading-icon").nextElementSibling;
+  const relAnchor = document.querySelector("[data-attrid=\"kc:/visual_art/visual_artist:works\"]");
+  // const relAnchor = relAnchor.lastElementChild.previousElementSibling; // the element prior to the show more button
+
+  const artworkResults = relAnchor;
+
   // works on live too, hmm
   // but NOT on discography
   //  NOTE: discography uses a different block - the GRID view, not a carousel view - (wp-grid-view, wp-grid-tile)
