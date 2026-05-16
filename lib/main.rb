@@ -9,91 +9,80 @@ class Page
   def initialize(html)
     @html = html
     @doc = Nokogiri::HTML(@html)
-    # @lazyImages = 
-    # @imageMap = Map.new()
   end
 
   def scrape()
-    _buildLazyLoadMap()
-    _scrapeCarousel()
+    build_lazy_load_map()
+    scrape_carousel()
   end
 
-  def _buildLazyLoadMap() 
-    # TODO: regex efficiency?
+  # search for images that are lazily loaded
+  # these images are stored in <script> tags
+  # however: not all images are lazily loaded
+  private def build_lazy_load_map () 
     # this will break if Google swaps the variable order
     results = @html.scan(/var s='(data:[a-z]+\/[a-z]+;base64,[^']+)';var ii=\['([^']+)'\]/)
-    if results.empty? then
-      # TODO: error type
-      # TODO: might not need to be an error, 
-      #   not every carousel may have lazy-load images
-      raise ScraperError, "no lazily-loaded images found - structure may have changed"
-    end
 
     # nice and simple
     @imageMap = results.to_h { | image, id | [ id, image ] }
   end
 
-  def _scrapeCarousel()
+  private def scrape_carousel()
+    # couldn't find any other carousel type -
+    #   everything else (albums, films, books) use grids instead of carousels
+    #   grids may look functionally identical, but they are semantically different
     carousel = @doc.css("[data-attrid=\"kc:/visual_art/visual_artist:works\"]")
-    # puts carousel
 
     # the <a> parent doesn't have any class/id
     # img is more stable, in that case
-    _items = carousel.css("img").map do | img |
+    items = carousel.css("img").map do | img |
       # precedence: lazy load > data-src > src
       image = (
         @imageMap[img[:id]] ||
-        img['data-src'] ||  # TODO: style
+        img['data-src'] ||
         img['src']
       )
 
+      raise ScraperError, 'missing image data - structure changed?' if image.nil?
+      raise ScraperError, 'placeholder gif detected - structure changed?' if image.start_with?("data:image/gif;base64,")
+
       # a > img, div
       details = img.parent.css("div")
-      if details.nil? 
-        raise ScraperError, "missing work details"
-      end
+      raise ScraperError, "missing work details" if details.children.length == 0
 
       # div > div, div
-      # TODO: check nil
       name = details.children.first.text
-      maybeYear = details.children.last.text
-
-      # extensions = (maybeYear.nil? || maybeYear == name) ? nil : [ maybeYear ]
-
-      item = {
-        "name" => name || img[:alt],
-        "link" => (
-          # remap file://
-          "https://www.google.com" +
-          # this will break if the image parent changes
-          # still works on the example from 2 years ago, 
-          # and the current serp
-          img.parent[:href]
-        ),
-        "image" => image.gsub('\x3d', '='), 
-      }
-
-      # TODO: there should be a better way to do this
-      if !maybeYear.nil? && maybeYear != name then
-        item["extensions"] = [ maybeYear ]
-      end
+      maybe_year = details.children.last.text # TODO: how to do this better? this may or may not be present
 
       # implicit returns - neat!
-      item
+      {
+        "name" => name != "" ? name : img[:alt],
+        "extensions" => maybe_year != name ? [ maybe_year ] : nil,
+        "link" => (
+          # remap `file://` to match expected
+          "https://www.google.com" +
+          # this will break if the image parent changes
+          # but it works on the example from 2 years ago, 
+          # and it works on the current serp
+          img.parent[:href]
+        ),
+        "image" => image.gsub('\x3d', '='),
+      }.compact
     end
 
-    return { "artworks" => _items }
+    { "artworks" => items }
   end
 end
 
-# def scrape(html)
-#   doc = Nokogiri::HTML(html)
+if $0 == __FILE__ 
+  if ARGV[0].nil?
+    puts "USAGE: #{$0} <serp.html>"
+    exit 1
+  end
 
-# end 
-
-p = Page.new(
-  File.read("./files/van-gogh-paintings.html")
-)
-# items = p.scrape()
-# scrape(File.open("./files/van-gogh-paintings.html"))
-puts(JSON.pretty_generate(p.scrape()))
+  puts JSON.pretty_generate(
+    Page.new(
+      File.read(ARGV[0])
+    ).scrape()
+  )
+end
