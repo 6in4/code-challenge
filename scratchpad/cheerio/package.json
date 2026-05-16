@@ -6,9 +6,11 @@
         "ts-node": "10.9.2"
     },
     "devDependencies": {
-        "typescript": "6.0.3"
+        "typescript": "6.0.3",
+        "vitest": "3.2.0"
     },
     "scripts": {
-        "start": "ts-node main.ts"
+        "start": "ts-node main.ts",
+        "test": "vitest run"
     }
 }
