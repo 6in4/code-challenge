@@ -1,0 +1,10 @@
+# frozen_string_literal: true
+
+source "https://rubygems.org"
+
+ruby "~> 3.4"
+
+# gem "rails"
+
+gem "rspec"
+gem "nokogiri", "~> 1.19"
